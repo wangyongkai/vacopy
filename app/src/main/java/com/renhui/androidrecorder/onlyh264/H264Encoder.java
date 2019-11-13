@@ -98,6 +98,8 @@ public class H264Encoder {
                     }
                     if (input != null) {
                         try {
+
+
                             //输入输出缓冲器
                             ByteBuffer[] inputBuffers = mediaCodec.getInputBuffers();
                             ByteBuffer[] outputBuffers = mediaCodec.getOutputBuffers();
@@ -106,6 +108,11 @@ public class H264Encoder {
                             //你会通过各种方法获得一个ByteBuffer的数组，这些数据就是准备处理的数据。
                             //你要通过自己的方法找到你要处理的部分，然后调用dequeueInputBuffer方法
                             //提取出要处理的部分（也就是一个ByteBuffer数据流），把这一部分放到缓存区。
+
+
+                            //-------------------------------------------------------------------------
+                            //以下为处理输入的数据流
+
 
                             //要处理数据的部分的索引
                             int inputBufferIndex = mediaCodec.dequeueInputBuffer(-1);
@@ -119,29 +126,37 @@ public class H264Encoder {
                                 //根据帧数生成时间戳
                                 pts = computePresentationTime(generateIndex);
 
-                                //找到要处理的数据ByteBuffer 意思是找到要把要解析的数据放到这个ByteBuffer
+                                //找到要处理的数据ByteBuffer(先找到索引，再由索引找到ByteBuffer)  意思是找到要把要解析的数据放到这个ByteBuffer
                                 ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
                                 inputBuffer.clear();
+
 
                                 //放入要解析的数据
                                 inputBuffer.put(input);
 
-                                //告诉编码器数据已经放入指定的ByteBuffer    找到--放入--告诉codec放入
+
+                                //告诉编码器数据已经放入指定的ByteBuffer
+                                //告诉编码器要对第inputBufferIndex个位置的ByteBuffer进行编码，编码长度是input.length。
                                 mediaCodec.queueInputBuffer(inputBufferIndex, 0, input.length, System.currentTimeMillis(), 0);
                                 generateIndex += 1;
                             }
+
+                            //-------------------------------------------------------------------------
+                            //以下为输出编码后的流数据
 
                             //存放输出buffer信息的对象 主要包括输出buffer的offset size
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
                             //要输出数据的部分的索引
                             int outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
+
                             while (outputBufferIndex >= 0) {
+                                //根据索引找到输出的ByteBuffer
                                 ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
 
                                 //构造跟输出buffer的长度一致的数组
                                 byte[] outData = new byte[bufferInfo.size];
-                                //把输入的数据写入outData
+                                //把数据写入outData
                                 outputBuffer.get(outData);
                                 if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
                                     //不是media数据    /**
@@ -151,21 +166,27 @@ public class H264Encoder {
                                     configbyte = new byte[bufferInfo.size];
                                     configbyte = outData;
                                 } else if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_SYNC_FRAME) {
+
                                     //关键帧
                                     byte[] keyframe = new byte[bufferInfo.size + configbyte.length];
+
                                     //把不是media的configbyte复制到关键帧的开始
                                     System.arraycopy(configbyte, 0, keyframe, 0, configbyte.length);
 
                                     //把关键帧数据复制到configbyte后面
                                     System.arraycopy(outData, 0, keyframe, configbyte.length, outData.length);
+
                                     outputStream.write(keyframe, 0, keyframe.length);
                                 } else {
                                     outputStream.write(outData, 0, outData.length);
                                 }
 
+                                //再执行一遍 outputBufferIndex可能就小于0  跳出循环
                                 mediaCodec.releaseOutputBuffer(outputBufferIndex, false);
                                 outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
                             }
+                            //-------------------------------------------------------------------------
+
 
                         } catch (Throwable t) {
                             t.printStackTrace();
@@ -178,6 +199,7 @@ public class H264Encoder {
                         }
                     }
                 }
+
 
                 // 停止编解码器并释放资源
                 try {
