@@ -13,6 +13,9 @@ import java.util.Vector;
 
 /**
  * 音视频混合线程
+ * <p>
+ * 生成一个mp4文件需要MediaMuxer类来合成视频数据和音频数据 然后保存成文件
+ * 并不是音视频单独写的 必须给MediaMuxer写
  */
 public class MediaMuxerThread extends Thread {
 

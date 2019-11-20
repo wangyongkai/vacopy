@@ -14,6 +14,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * H264 编码类
+ * <p>
+ * 将流保存成MP4文件
  */
 public class H264Encoder {
 
