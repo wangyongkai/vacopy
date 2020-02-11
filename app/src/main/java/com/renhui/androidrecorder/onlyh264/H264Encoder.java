@@ -80,6 +80,11 @@ public class H264Encoder {
     }
 
     /***
+     *
+     *
+     * 硬编码的模型：双缓冲器模型
+     *
+     *
      * 开始编码
      */
     public void startEncoder() {
