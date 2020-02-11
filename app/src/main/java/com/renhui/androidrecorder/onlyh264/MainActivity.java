@@ -7,6 +7,7 @@ import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
+import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
@@ -83,12 +84,36 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // 遍历支持的编码格式信息
         if (Build.VERSION.SDK_INT >= 18) {
             for (int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--) {
+
                 MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
 
                 String[] types = codecInfo.getSupportedTypes();
                 Log.e("MainActivity", "codecInfo.getName()=" + codecInfo.getName() + " types=" + Arrays.toString(types));
                 for (int i = 0; i < types.length; i++) {
                     if (types[i].equalsIgnoreCase("video/avc")) {
+
+                        //找到能硬编码h264的MediaCodecInfo对象
+                        //下面是根据MediaCodecInfo找到合适的COLOR_FORMAT
+
+                        //疑问：找到颜色格式，是要在如下地方使用吗  设置正确的MediaFormat.KEY_COLOR_FORMAT
+                       // MediaFormat videoFormat = MediaFormat.createVideoFormat(VCODEC, vOutWidth, vOutHeight);
+                       // videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
+
+                        //int matchedColorFormat = 0;
+                        //        MediaCodecInfo.CodecCapabilities cc = vmci.getCapabilitiesForType(VCODEC);
+                        //        for (int i = 0; i < cc.colorFormats.length; i++) {
+                        //            int cf = cc.colorFormats[i];
+                        //            Log.i(TAG, String.format("vencoder %s supports color fomart 0x%x(%d)", vmci.getName(), cf, cf));
+                        //
+                        //            // choose YUV for h.264, prefer the bigger one.
+                        //            // corresponding to the color space transform in onPreviewFrame
+                        //            if (cf >= cc.COLOR_FormatYUV420Planar && cf <= cc.COLOR_FormatYUV420SemiPlanar) {
+                        //                if (cf > matchedColorFormat) {
+                        //                    matchedColorFormat = cf;
+                        //                }
+                        //            }
+                        //        }
+
                         return true;
                     }
                 }
