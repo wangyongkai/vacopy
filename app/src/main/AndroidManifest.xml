@@ -19,12 +19,12 @@
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".onlyh264.MainActivity">
+        <activity android:name=".muxer.MediaMuxerActivity">
 
         </activity>
 
         <activity
-            android:name=".muxer.MediaMuxerActivity"
+            android:name=".onlyh264.MainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

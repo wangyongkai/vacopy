@@ -4,12 +4,14 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.os.Environment;
+import android.util.Log;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 
 /**
@@ -58,7 +60,7 @@ public class H264Encoder {
     }
 
     private void createfile() {
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/test.mp4";
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + System.currentTimeMillis() + ".mp4";
         File file = new File(path);
         if (file.exists()) {
             file.delete();
@@ -100,6 +102,22 @@ public class H264Encoder {
                     }
                     if (input != null) {
                         try {
+
+
+                            //模型：两个ByteBuffer[]缓冲器。dequeueInputBuffer拿到输入缓冲器的某个索引位置，根据索引位置拿到这个
+                            //索引位置的ByteBuffer,这个ByteBuffer就是要解码的数据存放的ByteBuffer。queueInputBuffer会寻找这个索引
+                            //位置并拿到要解码的数据并对其进行解码。
+                            //dequeueOutputBuffer拿到输出缓冲器的某个索引位置，这个位置对应的ByteBuffer就是解码后的数据存储的位置。
+
+                            /**
+                             *                                          获取Index(dequeueInputBuffer)              queueInputBuffer解码
+                             * input data---->输入缓冲区ByteBuffer[]------------------------------------>ByteBuffer---------------------->
+                             *
+                             *
+                             *                        获取Index(dequeueOutputBuffer)                  get到数据数组
+                             * 输出缓冲器ByteBuffer[]------------------------------------>ByteBuffer----------------->编码byte[]
+                             *
+                             */
 
 
                             //输入输出缓冲器
@@ -152,7 +170,7 @@ public class H264Encoder {
                             //要输出数据的部分的索引
                             int outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
 
-                            while (outputBufferIndex >= 0) {
+                            while (outputBufferIndex >= 0) {//视频编码一般会只执行一次
                                 //根据索引找到输出的ByteBuffer
                                 ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
 
@@ -160,6 +178,17 @@ public class H264Encoder {
                                 byte[] outData = new byte[bufferInfo.size];
                                 //把数据写入outData
                                 outputBuffer.get(outData);
+
+
+//
+//                                BufferInfo中的标志位：
+//                                BUFFER_FLAG_SYNC_FRAME（deprecated）：这一帧是关键帧
+//                                BUFFER_FLAG_KEY_FRAME：同上
+//                                BUFFER_FLAG_CODEC_CONFIG：这一帧数据不是多媒体数据，而是codec specific data
+//                                BUFFER_FLAG_END_OF_STREAM：后面没有数据了。接收到这个，编码器会关闭入口，不再吃数据，除非调用flush()重启
+//
+
+
                                 if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
                                     //不是media数据    /**
                                     //     * This indicated that the buffer marked as such contains codec
@@ -167,7 +196,11 @@ public class H264Encoder {
                                     //     */
                                     configbyte = new byte[bufferInfo.size];
                                     configbyte = outData;
+                                    //配置数据就是sps+pps  只执行1次
+                                    Log.d("H264Encoder", "配置数据-->" + configbyte.length + " data=" + Arrays.toString(configbyte));
                                 } else if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_SYNC_FRAME) {
+
+                                    Log.d("H264Encoder", "关键帧---->");
 
                                     //关键帧
                                     byte[] keyframe = new byte[bufferInfo.size + configbyte.length];
@@ -179,8 +212,11 @@ public class H264Encoder {
                                     System.arraycopy(outData, 0, keyframe, configbyte.length, outData.length);
 
                                     outputStream.write(keyframe, 0, keyframe.length);
-                                } else {
+                                } else if (bufferInfo.flags != MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
                                     outputStream.write(outData, 0, outData.length);
+                                    Log.d("H264Encoder", "非关键帧---->");
+                                } else {
+                                    Log.d("H264Encoder", "BUFFER_FLAG_END_OF_STREAM>");
                                 }
 
                                 //再执行一遍 outputBufferIndex可能就小于0  跳出循环
